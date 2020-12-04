@@ -1,0 +1,13 @@
+[Unit]
+Description=Cat Feeder
+After=network.target
+
+[Service]
+ExecStart=/opt/catfeeder/catfeeder
+Type=simple
+PIDFile=/var/run/catfeeder.pid
+Restart=always
+
+[Install]
+WantedBy=default.target
+

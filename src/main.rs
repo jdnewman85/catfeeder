@@ -14,15 +14,11 @@ const PIN_SWITCH:u32 = 26;
 const PIN_MOTOR:u32 = 4;
 const PIN_IR:u32 = 16;
 
-const ADDRESS: &str = "10.1.49.25:6000";
+const ADDRESS: &str = "0.0.0.0:6000";
 
-fn main() {
+fn main() -> gpio_cdev::errors::Result<()> {
     println!("Hello, linus...");
 
-    app().unwrap();
-}
-
-fn app() -> gpio_cdev::errors::Result<()> {
     let socket = UdpSocket::bind(ADDRESS)?;
     let poll_delay = time::Duration::from_millis(DELAY_POLL);
     let debounce_delay = time::Duration::from_millis(DELAY_DEBOUNCE);
