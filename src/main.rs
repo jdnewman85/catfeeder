@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use gpio_cdev::{Chip, LineRequestFlags};
 
 use std::{thread, time};
@@ -16,7 +18,7 @@ const PIN_IR:u32 = 16;
 
 const ADDRESS: &str = "0.0.0.0:6000";
 
-fn main() -> gpio_cdev::errors::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     println!("Hello, linus...");
 
     let socket = UdpSocket::bind(ADDRESS)?;
