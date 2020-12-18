@@ -1,6 +1,6 @@
 use std::error::Error;
 
-//use gpio_cdev::{Chip, LineRequestFlags};
+use gpio_cdev::{Chip, AsyncLineEventHandle, LineRequestFlags, EventRequestFlags};
 
 //use std::{thread, time};
 use std::str;
@@ -8,14 +8,16 @@ use std::str;
 use tokio::net::UdpSocket;
 use std::net::SocketAddr;
 
+use futures::stream::StreamExt;
+
 /*
 const ON: u8 = 1;
 const OFF: u8 = 0;
 
-const PIN_SWITCH:u32 = 26;
 const PIN_MOTOR:u32 = 4;
-const PIN_IR:u32 = 16;
 */
+const PIN_IR:u32 = 16;
+const PIN_SWITCH:u32 = 26;
 
 const ADDRESS: &str = "0.0.0.0:6000";
 
@@ -25,13 +27,38 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   let socket = UdpSocket::bind(ADDRESS.parse::<SocketAddr>().unwrap()).await?;
 
+  let mut chip = Chip::new("/dev/gpiochip0")?;
+  let switch_line = chip.get_line(PIN_SWITCH)?;
+  let mut switch_stream = AsyncLineEventHandle::new(
+		switch_line.events(
+			LineRequestFlags::INPUT,
+			EventRequestFlags::BOTH_EDGES,
+			"switch"
+		)?
+	)?;
+  let ir_line = chip.get_line(PIN_IR)?;
+  let mut ir_stream = AsyncLineEventHandle::new(
+		ir_line.events(
+			LineRequestFlags::INPUT,
+			EventRequestFlags::BOTH_EDGES,
+			"ir"
+		)?
+	)?;
+
   let mut buf = [0; 1024];
   loop {
     tokio::select! {
-      r = socket.recv_from(&mut buf) => {
-        let (len, addr) = r.unwrap();
+      Ok((len, addr)) = socket.recv_from(&mut buf) => {
         println!("{:?} bytes received from {:?}", len, addr);
       }
+
+			Some(event) = switch_stream.next() => {
+        println!("{:?} event", event);
+			}
+
+			Some(event) = ir_stream.next() => {
+        println!("{:?} event", event);
+			}
     }
   }
 }
