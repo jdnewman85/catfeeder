@@ -30,20 +30,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let mut chip = Chip::new("/dev/gpiochip0")?;
   let switch_line = chip.get_line(PIN_SWITCH)?;
   let mut switch_stream = AsyncLineEventHandle::new(
-		switch_line.events(
-			LineRequestFlags::INPUT,
-			EventRequestFlags::BOTH_EDGES,
-			"switch"
-		)?
-	)?;
+    switch_line.events(
+      LineRequestFlags::INPUT,
+      EventRequestFlags::BOTH_EDGES,
+      "switch"
+    )?
+  )?;
   let ir_line = chip.get_line(PIN_IR)?;
   let mut ir_stream = AsyncLineEventHandle::new(
-		ir_line.events(
-			LineRequestFlags::INPUT,
-			EventRequestFlags::BOTH_EDGES,
-			"ir"
-		)?
-	)?;
+    ir_line.events(
+      LineRequestFlags::INPUT,
+      EventRequestFlags::BOTH_EDGES,
+      "ir"
+    )?
+  )?;
 
   let mut buf = [0; 1024];
   loop {
@@ -52,13 +52,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("{:?} bytes received from {:?}", len, addr);
       }
 
-			Some(event) = switch_stream.next() => {
+      Some(event) = switch_stream.next() => {
         println!("{:?} event", event);
-			}
+      }
 
-			Some(event) = ir_stream.next() => {
+      Some(event) = ir_stream.next() => {
         println!("{:?} event", event);
-			}
+      }
     }
   }
 }
