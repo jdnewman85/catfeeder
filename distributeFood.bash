@@ -2,12 +2,23 @@
 
 set -euo pipefail
 
+#feeder_cats=('linus' 'stormy' 'inga')
+#feeder_ips=('10.1.49.26' '10.1.219.91' '10.1.49.27')
 feeder_cats=('linus' 'stormy' 'inga')
 feeder_ips=('10.1.49.26' '10.1.219.91' '10.1.49.27')
+portions=4
+delay=60 #s
 port=6000
 
 printf "Feeding bad ones\n"
-for i in "${!feeder_ips[@]}"; do
-	printf "\tfeeding: %s (%s:%s)\n" "${feeder_cats[$i]}" "${feeder_ips[$i]}" "${port}"
-	printf "Be fed %s" "${feeder_cats[$i]}" > "/dev/udp/${feeder_ips[$i]}/${port}"
+for ((i=0; i<portions; i++)); do
+  ((i_plus_one=i+1))
+  printf "\tround %d/%d\n" "${i_plus_one}" "${portions}"
+  for f in "${!feeder_ips[@]}"; do
+    printf "\t\tfeeding: %s (%s:%s)\n" "${feeder_cats[$f]}" "${feeder_ips[$f]}" "${port}"
+    printf "Be fed %s" "${feeder_cats[$f]}" > "/dev/udp/${feeder_ips[$f]}/${port}"
+  done
+  printf "\tsleeping %d...\n" "${delay}"
+  sleep "${delay}"
 done
+printf "Bad ones fed!\n"

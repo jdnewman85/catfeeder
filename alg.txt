@@ -1,0 +1,12 @@
+On packet
+	filter valid packet
+	store packet timestamp
+	clear ir till now
+	wait for ir off
+	motor on
+	clear sw till now
+	until sw on
+	delay
+	clear sw till now
+	until sw off
+	motor off
