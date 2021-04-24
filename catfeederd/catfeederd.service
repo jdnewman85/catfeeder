@@ -1,0 +1,10 @@
+[Unit]
+Description=Cat Feeder Daemon
+
+[Service]
+WorkingDirectory=/opt/catfeederd
+ExecStart=/opt/catfeederd/distribute_food.bash
+Type=simple
+PIDFile=/var/run/catfeederd.pid
+Restart=no
+
