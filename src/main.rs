@@ -6,58 +6,45 @@ use tokio::net::UdpSocket;
 use std::net::SocketAddr;
 
 use bytes::{BytesMut};
-use tokio_util::codec::{Decoder, Encoder};
+use tokio_util::codec::Decoder;
 use tokio_util::udp::UdpFramed;
 
 use futures::stream::StreamExt;
 
+/*
 use gpio_cdev::{Chip, AsyncLineEventHandle, LineRequestFlags, EventRequestFlags};
 
 const PIN_IR:u32 = 16;
 const PIN_SWITCH:u32 = 26;
 
-/*
 const ON: u8 = 1;
 const OFF: u8 = 0;
 const PIN_MOTOR:u32 = 4;
 */
 
 #[derive(Debug)]
-struct FeedPacket;
+struct FeedPacket {
+    data: String
+}
 #[derive(Debug)]
 struct Packet;
-
-/*
-#[derive(Debug)]
-struct PacketError;
-impl std::fmt::Display for PacketError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Packet Error here")
-    }
-}
-
-impl Error for PacketError {
-    fn description(&self) -> &str {
-        "Todo"
-    }
-}
-*/
 
 impl Decoder for Packet {
     type Item = FeedPacket;
     type Error = std::io::Error;
-    fn decode(&mut self, _src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        Ok(Some(FeedPacket{}))
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        let s = str::from_utf8(&src).unwrap();
+        /*
+        let s = match str::from_utf8(&data) {
+            Ok(v) => v,
+            Err(e) => panic!("Invalid UTF-8: {}", e),
+        };
+        */
+        Ok(Some(FeedPacket{
+            data: String::from(s)
+        }))
     }
 }
-
-impl Encoder<FeedPacket> for Packet {
-    type Error = std::io::Error;
-    fn encode(&mut self, _item: FeedPacket, _dst: &mut BytesMut) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
-
 const ADDRESS: &str = "0.0.0.0:6000";
 
 #[tokio::main]
@@ -67,6 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let socket = UdpSocket::bind(ADDRESS.parse::<SocketAddr>().unwrap()).await?;
   let mut framed_socket = UdpFramed::new(socket, Packet{});
 
+  /*
   // Feed service
   let mut chip = Chip::new("/dev/gpiochip0")?;
   let switch_line = chip.get_line(PIN_SWITCH)?;
@@ -85,8 +73,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
       "ir"
     )?
   )?;
+  */
 
-//  let mut buf = [0; 1024];
+  while let Some(Ok(feed_packet)) = framed_socket.next().await {
+      dbg!("FeedPacket: {:?}", feed_packet);
+  }
+
+  Ok(())
+  /*
   loop {
     tokio::select! {
       /*
@@ -94,7 +88,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("{:?} bytes received from {:?}", len, addr);
       }
       */
-      Some(_packet) = framed_socket.next() => {
+      Some(_feed_packet) = framed_socket.next() => {
         println!("Packet recieved!");
       }
 
@@ -107,4 +101,5 @@ async fn main() -> Result<(), Box<dyn Error>> {
       }
     }
   }
+*/
 }
