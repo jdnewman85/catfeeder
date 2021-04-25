@@ -34,12 +34,6 @@ impl Decoder for Packet {
     type Error = std::io::Error;
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         let s = str::from_utf8(&src).unwrap();
-        /*
-        let s = match str::from_utf8(&data) {
-            Ok(v) => v,
-            Err(e) => panic!("Invalid UTF-8: {}", e),
-        };
-        */
         Ok(Some(FeedPacket{
             data: String::from(s)
         }))
@@ -80,26 +74,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
   }
 
   Ok(())
-  /*
-  loop {
-    tokio::select! {
-      /*
-      Ok((len, addr)) = socket.recv_from(&mut buf) => {
-        println!("{:?} bytes received from {:?}", len, addr);
-      }
-      */
-      Some(_feed_packet) = framed_socket.next() => {
-        println!("Packet recieved!");
-      }
-
-      Some(event) = switch_stream.next() => {
-        println!("{:?} event", event);
-      }
-
-      Some(event) = ir_stream.next() => {
-        println!("{:?} event", event);
-      }
-    }
-  }
-*/
 }
