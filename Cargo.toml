@@ -10,3 +10,6 @@ edition = "2018"
 gpio-cdev = { git="https://github.com/jdnewman85/gpio-cdev", version="*", features=["async-tokio"] }
 tokio = { version="1", features=["full"] }
 futures = "0.3"
+
+tokio-util = { version="*", features=["full"] }
+bytes = "*"

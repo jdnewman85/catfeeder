@@ -5,6 +5,10 @@ use std::str;
 use tokio::net::UdpSocket;
 use std::net::SocketAddr;
 
+use bytes::{BytesMut};
+use tokio_util::codec::{Decoder, Encoder};
+use tokio_util::udp::UdpFramed;
+
 use futures::stream::StreamExt;
 
 use gpio_cdev::{Chip, AsyncLineEventHandle, LineRequestFlags, EventRequestFlags};
@@ -18,6 +22,42 @@ const OFF: u8 = 0;
 const PIN_MOTOR:u32 = 4;
 */
 
+#[derive(Debug)]
+struct FeedPacket;
+#[derive(Debug)]
+struct Packet;
+
+/*
+#[derive(Debug)]
+struct PacketError;
+impl std::fmt::Display for PacketError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Packet Error here")
+    }
+}
+
+impl Error for PacketError {
+    fn description(&self) -> &str {
+        "Todo"
+    }
+}
+*/
+
+impl Decoder for Packet {
+    type Item = FeedPacket;
+    type Error = std::io::Error;
+    fn decode(&mut self, _src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        Ok(Some(FeedPacket{}))
+    }
+}
+
+impl Encoder<FeedPacket> for Packet {
+    type Error = std::io::Error;
+    fn encode(&mut self, _item: FeedPacket, _dst: &mut BytesMut) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 const ADDRESS: &str = "0.0.0.0:6000";
 
 #[tokio::main]
@@ -25,6 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   println!("Cat feeder");
 
   let socket = UdpSocket::bind(ADDRESS.parse::<SocketAddr>().unwrap()).await?;
+  let mut framed_socket = UdpFramed::new(socket, Packet{});
 
   // Feed service
   let mut chip = Chip::new("/dev/gpiochip0")?;
@@ -45,11 +86,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )?
   )?;
 
-  let mut buf = [0; 1024];
+//  let mut buf = [0; 1024];
   loop {
     tokio::select! {
+      /*
       Ok((len, addr)) = socket.recv_from(&mut buf) => {
         println!("{:?} bytes received from {:?}", len, addr);
+      }
+      */
+      Some(_packet) = framed_socket.next() => {
+        println!("Packet recieved!");
       }
 
       Some(event) = switch_stream.next() => {
