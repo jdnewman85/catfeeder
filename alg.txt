@@ -1,12 +1,25 @@
-On packet
-	filter valid packet
-	store packet timestamp
-	clear ir till now
-	wait for ir off
-	motor on
-	clear sw till now
-	until sw on
-	delay
-	clear sw till now
-	until sw off
-	motor off
+Define framed packets
+Define feed handler packets
+
+
+Primary Thread
+	sets up other threads, then handles incoming packets
+
+	On startup
+		create feed handler channel
+		launch feed handler thread
+		accept packets via while let .next().await (FH thread)
+
+	On packet
+		filter valid packet (framed handles this)
+		send packet enum to feed handler channel
+
+FeedHandler thread
+	handles primary IO resources and actual feeding process
+
+	On feed handler packet
+		wait for ir off
+		motor on
+		delay until sw on
+		delay until sw off
+		motor off

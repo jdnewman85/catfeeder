@@ -50,6 +50,7 @@ impl Decoder for Packet {
         }
     }
 }
+
 const ADDRESS: &str = "0.0.0.0:7000";
 
 #[tokio::main]
@@ -59,7 +60,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let socket = UdpSocket::bind(ADDRESS.parse::<SocketAddr>().unwrap()).await?;
   let mut framed_socket = UdpFramed::new(socket, Packet{});
 
-  let (tx, mut rx) = mpsc::channel(10);
+  let (tx, mut rx) = mpsc::unbounded_channel();
 
   /*
   // Feed service
@@ -90,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   while let Some(Ok(feed_packet)) = framed_socket.next().await {
       dbg!(&feed_packet);
-      tx.send(feed_packet).await.unwrap();
+      tx.send(feed_packet).unwrap();
   }
 
   Ok(())
