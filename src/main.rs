@@ -104,14 +104,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
           // Motor on
           motor.set_value(MOTOR_ON).expect("Unable to turn motor on!");
 
-          // Wait for switch on
+          // Wait for switch off
           let switch_state = switch_line.request(LineRequestFlags::INPUT, 0, "switch").unwrap()
               .get_value().unwrap();
-          if switch_state == SWITCH_OFF {
+          if switch_state == SWITCH_ON {
               let mut switch_stream = AsyncLineEventHandle::new(
                 switch_line.events(
                   LineRequestFlags::INPUT,
-                  EventRequestFlags::RISING_EDGE,
+                  EventRequestFlags::FALLING_EDGE,
                   "switch"
                 ).unwrap()
               ).unwrap();
@@ -121,14 +121,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
           // Wait for debounce
           sleep(Duration::from_millis(DELAY_DEBOUNCE)).await;
 
-          // Wait for switch off
+          // Wait for switch on
           let switch_state = switch_line.request(LineRequestFlags::INPUT, 0, "switch").unwrap()
               .get_value().unwrap();
-          if switch_state == SWITCH_ON {
+          if switch_state == SWITCH_OFF {
               let mut switch_stream = AsyncLineEventHandle::new(
                 switch_line.events(
                   LineRequestFlags::INPUT,
-                  EventRequestFlags::FALLING_EDGE,
+                  EventRequestFlags::RISING_EDGE,
                   "switch"
                 ).unwrap()
               ).unwrap();
