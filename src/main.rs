@@ -76,10 +76,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let mut chip = Chip::new("/dev/gpiochip0")?;
 
   let ir_line = chip.get_line(PIN_IR)?;
-  let ir = ir_line.request(LineRequestFlags::INPUT, 0, "ir")?;
 
   let switch_line = chip.get_line(PIN_SWITCH)?;
-  let switch = switch_line.request(LineRequestFlags::INPUT, 0, "switch")?;
 
   let motor = chip
       .get_line(PIN_MOTOR)?
@@ -89,7 +87,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
       while let Some(feed_packet) = rx.recv().await {
           dbg!(&feed_packet);
           // Wait for ir off
-          if ir.get_value().unwrap() == IR_ON {
+          let ir_state = ir_line
+              .request(LineRequestFlags::INPUT, 0, "ir").unwrap()
+              .get_value().unwrap();
+          if ir_state == IR_ON {
               let mut ir_stream = AsyncLineEventHandle::new(
                 ir_line.events(
                   LineRequestFlags::INPUT,
@@ -104,7 +105,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
           motor.set_value(MOTOR_ON).expect("Unable to turn motor on!");
 
           // Wait for switch on
-          if switch.get_value().unwrap() == SWITCH_OFF {
+          let switch_state = switch_line.request(LineRequestFlags::INPUT, 0, "switch").unwrap()
+              .get_value().unwrap();
+          if switch_state == SWITCH_OFF {
               let mut switch_stream = AsyncLineEventHandle::new(
                 switch_line.events(
                   LineRequestFlags::INPUT,
@@ -119,7 +122,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
           sleep(Duration::from_millis(DELAY_DEBOUNCE)).await;
 
           // Wait for switch off
-          if switch.get_value().unwrap() == SWITCH_ON {
+          let switch_state = switch_line.request(LineRequestFlags::INPUT, 0, "switch").unwrap()
+              .get_value().unwrap();
+          if switch_state == SWITCH_ON {
               let mut switch_stream = AsyncLineEventHandle::new(
                 switch_line.events(
                   LineRequestFlags::INPUT,
