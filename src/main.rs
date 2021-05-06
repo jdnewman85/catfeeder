@@ -27,6 +27,12 @@ const MOTOR_ON: u8 = 1;
 const MOTOR_OFF: u8 = 0;
 const PIN_MOTOR:u32 = 4;
 
+const IR_ON: u8 = 1;
+const IR_OFF: u8 = 0;
+
+const SWITCH_ON: u8 = 1;
+const SWITCH_OFF: u8 = 0;
+
 const DELAY_DEBOUNCE:u64 = 200;
 
 #[derive(Debug)]
@@ -68,22 +74,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   // Feed service
   let mut chip = Chip::new("/dev/gpiochip0")?;
-  let switch_line = chip.get_line(PIN_SWITCH)?;
-  let mut switch_stream = AsyncLineEventHandle::new(
-    switch_line.events(
-      LineRequestFlags::INPUT,
-      EventRequestFlags::BOTH_EDGES,
-      "switch"
-    )?
-  )?;
+
   let ir_line = chip.get_line(PIN_IR)?;
-  let mut ir_stream = AsyncLineEventHandle::new(
-    ir_line.events(
-      LineRequestFlags::INPUT,
-      EventRequestFlags::BOTH_EDGES,
-      "ir"
-    )?
-  )?;
+  let ir = ir_line.request(LineRequestFlags::INPUT, 0, "ir")?;
+
+  let switch_line = chip.get_line(PIN_SWITCH)?;
+  let switch = switch_line.request(LineRequestFlags::INPUT, 0, "switch")?;
 
   let motor = chip
       .get_line(PIN_MOTOR)?
@@ -93,29 +89,45 @@ async fn main() -> Result<(), Box<dyn Error>> {
       while let Some(feed_packet) = rx.recv().await {
           dbg!(&feed_packet);
           // Wait for ir off
-          while let Some(Ok(ir_event)) = ir_stream.next().await {
-              if ir_event.event_type() == EventType::FallingEdge {
-                  break;
-              }
+          if ir.get_value().unwrap() == IR_ON {
+              let mut ir_stream = AsyncLineEventHandle::new(
+                ir_line.events(
+                  LineRequestFlags::INPUT,
+                  EventRequestFlags::FALLING_EDGE,
+                  "ir"
+                ).unwrap()
+              ).unwrap();
+              ir_stream.next().await;
           }
 
           // Motor on
           motor.set_value(MOTOR_ON).expect("Unable to turn motor on!");
 
           // Wait for switch on
-          while let Some(Ok(switch_event)) = switch_stream.next().await {
-              if switch_event.event_type() == EventType::RisingEdge {
-                  break;
-              }
+          if switch.get_value().unwrap() == SWITCH_OFF {
+              let mut switch_stream = AsyncLineEventHandle::new(
+                switch_line.events(
+                  LineRequestFlags::INPUT,
+                  EventRequestFlags::RISING_EDGE,
+                  "switch"
+                ).unwrap()
+              ).unwrap();
+              switch_stream.next().await;
           }
+
           // Wait for debounce
           sleep(Duration::from_millis(DELAY_DEBOUNCE)).await;
 
           // Wait for switch off
-          while let Some(Ok(switch_event)) = switch_stream.next().await {
-              if switch_event.event_type() == EventType::FallingEdge {
-                  break;
-              }
+          if switch.get_value().unwrap() == SWITCH_ON {
+              let mut switch_stream = AsyncLineEventHandle::new(
+                switch_line.events(
+                  LineRequestFlags::INPUT,
+                  EventRequestFlags::FALLING_EDGE,
+                  "switch"
+                ).unwrap()
+              ).unwrap();
+              switch_stream.next().await;
           }
 
           //Motor off
