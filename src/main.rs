@@ -25,11 +25,8 @@ const MOTOR_ON: u8 = 1;
 const MOTOR_OFF: u8 = 0;
 const PIN_MOTOR: u32 = 4;
 
-const IR_ON: u8 = 1;
-//const IR_OFF: u8 = 0;
-
-const SWITCH_ON: u8 = 1;
-const SWITCH_OFF: u8 = 0;
+const IO_ON: u8 = 1;
+const IO_OFF: u8 = 0;
 
 const DELAY_DEBOUNCE: u64 = 200;
 
@@ -82,73 +79,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(async move {
         while let Some(feed_packet) = rx.recv().await {
             dbg!(&feed_packet);
-            // Wait for ir off
-            let ir_state = ir_line
-                .request(LineRequestFlags::INPUT, 0, "ir")
-                .unwrap()
-                .get_value()
-                .unwrap();
-            if ir_state == IR_ON {
-                let mut ir_stream = AsyncLineEventHandle::new(
-                    ir_line
-                        .events(
-                            LineRequestFlags::INPUT,
-                            EventRequestFlags::FALLING_EDGE,
-                            "ir",
-                        )
-                        .unwrap(),
-                )
-                .unwrap();
-                ir_stream.next().await;
-            }
-
-            // Motor on
+            wait_for_line(&ir_line, IO_OFF).await;
             motor.set_value(MOTOR_ON).expect("Unable to turn motor on!");
-
-            // Wait for switch off
-            let switch_state = switch_line
-                .request(LineRequestFlags::INPUT, 0, "switch")
-                .unwrap()
-                .get_value()
-                .unwrap();
-            if switch_state == SWITCH_ON {
-                let mut switch_stream = AsyncLineEventHandle::new(
-                    switch_line
-                        .events(
-                            LineRequestFlags::INPUT,
-                            EventRequestFlags::FALLING_EDGE,
-                            "switch",
-                        )
-                        .unwrap(),
-                )
-                .unwrap();
-                switch_stream.next().await;
-            }
-
-            // Wait for debounce
+            wait_for_line(&switch_line, IO_OFF).await;
             sleep(Duration::from_millis(DELAY_DEBOUNCE)).await;
-
-            // Wait for switch on
-            let switch_state = switch_line
-                .request(LineRequestFlags::INPUT, 0, "switch")
-                .unwrap()
-                .get_value()
-                .unwrap();
-            if switch_state == SWITCH_OFF {
-                let mut switch_stream = AsyncLineEventHandle::new(
-                    switch_line
-                        .events(
-                            LineRequestFlags::INPUT,
-                            EventRequestFlags::RISING_EDGE,
-                            "switch",
-                        )
-                        .unwrap(),
-                )
-                .unwrap();
-                switch_stream.next().await;
-            }
-
-            //Motor off
+            wait_for_line(&switch_line, IO_ON).await;
             motor
                 .set_value(MOTOR_OFF)
                 .expect("Unable to turn motor off!");
@@ -161,4 +96,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn io_state_to_edge_flag(state: u8) -> gpio_cdev::EventRequestFlags {
+    match state {
+        IO_ON => EventRequestFlags::RISING_EDGE,
+        IO_OFF => EventRequestFlags::FALLING_EDGE,
+        _ => panic!("Unhandled IO state: {}", state)
+    }
+}
+
+async fn wait_for_line(line: &gpio_cdev::Line, target_state: u8) {
+    // Wait for line
+    let state = line
+        .request(LineRequestFlags::INPUT, 0, "ir")
+        .unwrap()
+        .get_value()
+        .unwrap();
+    let target_edge = io_state_to_edge_flag(state);
+    if state != target_state {
+        let mut ir_stream = AsyncLineEventHandle::new(
+            line
+                .events(
+                    LineRequestFlags::INPUT,
+                    target_edge,
+                    "ir",
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        ir_stream.next().await;
+    }
 }
