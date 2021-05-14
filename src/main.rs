@@ -18,17 +18,19 @@ use gpio_cdev::{AsyncLineEventHandle, Chip, EventRequestFlags, LineRequestFlags}
 
 use tokio::time::{sleep, Duration};
 
+const IO_CHIP: &str = "/dev/gpiochip0";
+
 const PIN_IR: u32 = 16;
 const PIN_SWITCH: u32 = 26;
+const PIN_MOTOR: u32 = 4;
 
 const MOTOR_ON: u8 = 1;
 const MOTOR_OFF: u8 = 0;
-const PIN_MOTOR: u32 = 4;
 
 const IO_ON: u8 = 1;
 const IO_OFF: u8 = 0;
 
-const DELAY_DEBOUNCE: u64 = 200;
+const DELAY_DEBOUNCE: u64 = 200; //ms
 
 #[derive(Debug)]
 struct FeedPacket {
@@ -46,8 +48,8 @@ impl Decoder for Packet {
         src.clear();
 
         if remaining > 0 {
-            let s = String::from_utf8(source_bytes.to_vec()).unwrap();
-            Ok(Some(FeedPacket { data: s }))
+            let data = String::from_utf8(source_bytes.to_vec()).unwrap();
+            Ok(Some(FeedPacket{data}))
         } else {
             Ok(None)
         }
@@ -66,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (tx, mut rx) = mpsc::unbounded_channel();
 
     // Feed service
-    let mut chip = Chip::new("/dev/gpiochip0")?;
+    let mut chip = Chip::new(IO_CHIP)?;
 
     let ir_line = chip.get_line(PIN_IR)?;
 
@@ -84,9 +86,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             wait_for_line(&switch_line, IO_OFF).await;
             sleep(Duration::from_millis(DELAY_DEBOUNCE)).await;
             wait_for_line(&switch_line, IO_ON).await;
-            motor
-                .set_value(MOTOR_OFF)
-                .expect("Unable to turn motor off!");
+            motor.set_value(MOTOR_OFF).expect("Unable to turn motor off!");
         }
     });
 
@@ -109,22 +109,17 @@ fn io_state_to_edge_flag(state: u8) -> gpio_cdev::EventRequestFlags {
 async fn wait_for_line(line: &gpio_cdev::Line, target_state: u8) {
     // Wait for line
     let state = line
-        .request(LineRequestFlags::INPUT, 0, "ir")
-        .unwrap()
-        .get_value()
-        .unwrap();
-    let target_edge = io_state_to_edge_flag(state);
+        .request(LineRequestFlags::INPUT, 0, "ir").unwrap()
+        .get_value().unwrap();
     if state != target_state {
+        let target_edge = io_state_to_edge_flag(state);
         let mut ir_stream = AsyncLineEventHandle::new(
-            line
-                .events(
-                    LineRequestFlags::INPUT,
-                    target_edge,
-                    "ir",
-                )
-                .unwrap(),
-        )
-        .unwrap();
+            line.events(
+                LineRequestFlags::INPUT,
+                target_edge,
+                "ir",
+            ).unwrap(),
+        ).unwrap();
         ir_stream.next().await;
     }
 }
