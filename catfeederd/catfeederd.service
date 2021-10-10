@@ -4,6 +4,7 @@ Description=Cat Feeder Daemon
 [Service]
 WorkingDirectory=/opt/catfeederd
 ExecStart=/opt/catfeederd/distribute_food.bash
+ExecStartPost=/opt/catfeederd/distribute_food_extra.bash
 Type=simple
 PIDFile=/var/run/catfeederd.pid
 Restart=no

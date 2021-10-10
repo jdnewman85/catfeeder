@@ -2,18 +2,14 @@
 
 set -euo pipefail
 
-#feeder_cats=('linus' 'stormy' 'inga')
-#feeder_ips=('10.1.49.26' '10.1.219.91' '10.1.49.27')
-feeder_ips=('10.1.49.26')
-feeder_ips=('10.1.49.26' '10.1.219.91' '10.1.49.27')
-feeder_ips=('10.1.49.26' '10.1.219.91')
 feeder_cats=('linus' 'stormy' 'inga')
+feeder_ips=('10.1.49.26' '10.1.219.91')
 portions=1
 delay=0 #s
 port=6000
 
 cd "$(dirname "$0")"
-./checkFeeders.bash
+./check_feeders.bash
 
 printf "Feeding bad ones\n"
 for ((i=0; i<portions; i++)); do
